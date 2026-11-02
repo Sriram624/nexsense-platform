@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: nexsense
+      POSTGRES_USER: nexsense
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-only-change-me}
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U nexsense -d nexsense"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes: ["./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro","mosquitto_data:/mosquitto/data"]
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nexsense
+      SPRING_DATASOURCE_USERNAME: nexsense
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dev-only-change-me}
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      JWT_SECRET: ${JWT_SECRET:-ZGV2LXNlY3JldC1jaGFuZ2UtdGhpcy1iZWZvcmUtcHJvZHVjdGlvbi0zMi1ieXRlcw==}
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      mosquitto: {condition: service_started}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mosquitto_data:

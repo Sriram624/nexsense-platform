@@ -1,0 +1,11 @@
+.env
+**/.env
+node_modules/
+.expo/
+dist/
+build/
+target/
+*.log
+.DS_Store
+.idea/
+.vscode/
